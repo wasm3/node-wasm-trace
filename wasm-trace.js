@@ -64,6 +64,20 @@ function log(msg) {
 
   const trace = fs.createWriteStream('trace.log');
 
+  function traceMemory(name) {
+    return (id, val) => {
+      trace.write(`${name}: ${id} ${val}\n`);
+      return val;
+    }
+  }
+
+  function traceLocal(name) {
+    return (id, local, val) => {
+      trace.write(`${name}: ${id} ${local} ${val}\n`);
+      return val;
+    }
+  }
+
   log("Running...")
   const { instance } = await WebAssembly.instantiate(binary, {
     wasi_unstable: wasi.wasiImport,
@@ -71,80 +85,32 @@ function log(msg) {
       log_execution: function (id) {
         trace.write(`exec: ${id}\n`);
       },
-      load_ptr: function (id, id1, id2, val) {
-        trace.write(`load ptr: ${id} ${id1} ${id2} ${val}\n`);
-        return val;
+      load_ptr: function (id, align, offset, address) {
+        trace.write(`load ptr: ${id} ${align} ${offset} ${address}\n`);
+        return address;
       },
-      store_ptr: function (id, id1, id2, val) {
-        trace.write(`store ptr: ${id} ${id1} ${id2} ${val}\n`);
-        return val;
-      },
-      load_val_i32: function (id, val) {
-        trace.write(`load i32: ${id} ${val}\n`);
-        return val;
-      },
-      store_val_i32: function (id, val) {
-        trace.write(`store i32: ${id} ${val}\n`);
-        return val;
-      },
-      load_val_i64: function (id, val) {
-        trace.write(`load i32: ${id} ${val}\n`);
-        return val;
-      },
-      store_val_i64: function (id, val) {
-        trace.write(`store i32: ${id} ${val}\n`);
-        return val;
-      },
-      load_val_f32: function (id, val) {
-        trace.write(`load f32: ${id} ${val}\n`);
-        return val;
-      },
-      store_val_f32: function (id, val) {
-        trace.write(`store f32: ${id} ${val}\n`);
-        return val;
-      },
-      load_val_f64: function (id, val) {
-        trace.write(`load f64: ${id} ${val}\n`);
-        return val;
-      },
-      store_val_f64: function (id, val) {
-        trace.write(`store f64: ${id} ${val}\n`);
-        return val;
+      store_ptr: function (id, align, offset, address) {
+        trace.write(`store ptr: ${id} ${align} ${offset} ${address}\n`);
+        return address;
       },
 
-      get_i32: function (id, offset, val) {
-        trace.write(`get i32: ${id} ${offset} ${val}\n`);
-        return val;
-      },
-      set_i32: function (id, offset, val) {
-        trace.write(`set i32: ${id} ${offset} ${val}\n`);
-        return val;
-      },
-      get_i64: function (id, offset, val) {
-        trace.write(`get i64: ${id} ${offset} ${val}\n`);
-        return val;
-      },
-      set_i64: function (id, offset, val) {
-        trace.write(`set i64: ${id} ${offset} ${val}\n`);
-        return val;
-      },
+       load_val_i32: traceMemory( "load i32"),
+      store_val_i32: traceMemory("store i32"),
+       load_val_i64: traceMemory( "load i64"),
+      store_val_i64: traceMemory("store i64"),
+       load_val_f32: traceMemory( "load f32"),
+      store_val_f32: traceMemory("store f32"),
+       load_val_f64: traceMemory( "load f64"),
+      store_val_f64: traceMemory("store f64"),
 
-      get_f32: function (id, offset, val) {
-        trace.write(`get f32: ${id} ${offset} ${val}\n`);
-        return val;
-      },
-      set_f32: function (id, offset, val) {
-        trace.write(`set f32: ${id} ${offset} ${val}\n`);
-        return val;
-      },
-      get_f64: function (id, offset, val) {
-        trace.write(`get f64: ${id} ${offset} ${val}\n`);
-        return val;
-      },
-      set_f64: function (id, offset, val) {
-        trace.write(`set f64: ${id} ${offset} ${val}\n`);
-        return val;
-      },
+      get_i32: traceLocal("get i32"),
+      set_i32: traceLocal("set i32"),
+      get_i64: traceLocal("get i64"),
+      set_i64: traceLocal("set i64"),
+      get_f32: traceLocal("get f32"),
+      set_f32: traceLocal("set f32"),
+      get_f64: traceLocal("get f64"),
+      set_f64: traceLocal("set f64"),
     }
   });
   wasi.start(instance);
