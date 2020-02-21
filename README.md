@@ -22,7 +22,22 @@ $ wasm-trace ./test/hello.wasm
 [tracer] Running...
 Hello WebAssembly!
 ```
-The trace can be found in `trace.log`.
+The trace can be found in `trace.log`:
+```log
+exec: 5
+set i32: 0 0 68256
+exec: 50
+exec: 8
+get i32: 32 0 16
+exec: 25
+set i32: 33 1 68240
+get i32: 34 0 16
+load ptr: 5 4 1056 0
+load i32: 5 0
+set i32: 35 2 0
+get i32: 36 0 16
+...
+```
 
 You can also pass arguments to WASI apps:
 ```sh
