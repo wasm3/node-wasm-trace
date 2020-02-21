@@ -3,7 +3,7 @@
 "use strict";
 
 /*
- *
+ * Author: Volodymyr Shymanskyy
  */
 
 const fs = require("fs");
