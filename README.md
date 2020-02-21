@@ -8,10 +8,16 @@ node --experimental-wasm-bigint {command}
 ```
 It's also recommended to use the most recent version of Node.
 
+### Install
+
+```sh
+npm i -g https://github.com/wasm3/wasm-trace.git
+```
+
 ### Usage examples
 
 ```sh
-$ ./wasm-trace.js ./test/hello.wasm
+$ wasm-trace ./test/hello.wasm
 [tracer] Instrumenting...
 [tracer] Running...
 Hello WebAssembly!
@@ -20,9 +26,9 @@ The trace can be found in `trace.log`.
 
 You can also pass arguments to WASI apps:
 ```sh
-$ ./wasm-trace.js qjs.wasm fib.js 10
+$ wasm-trace qjs.wasm fib.js 10
 ...
-$ ./wasm-trace.js wasm3.wasm ./test/hello.wasm
+$ wasm-trace wasm3.wasm ./test/hello.wasm
 ...
 ```
 
