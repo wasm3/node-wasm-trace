@@ -1,0 +1,19 @@
+{
+  "name": "wasm-trace",
+  "version": "0.1.0",
+  "description": "Instruments wasm files and traces execution, using Binaryen.js and Wasmer.js",
+  "author": "Volodymyr Shymanskyy",
+  "main": "wasm-trace.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "wasm-trace": "wasm-trace.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@wasmer/wasi": "^0.7.1",
+    "@wasmer/wasm-transformer": "^0.7.1",
+    "binaryen": "^90.0.0"
+  }
+}
