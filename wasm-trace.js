@@ -55,7 +55,7 @@ function log(msg) {
   module.dispose();
   fs.writeFileSync(fileToRun + ".inst", binary);
 
-  /*
+  /* I64 transform is not needed (as soon as we're running with wasm-bigint support)
   log("I64 transform...");
   const WasmTransformer = require("@wasmer/wasm-transformer");
   binary = await WasmTransformer.lowerI64Imports(binary);
