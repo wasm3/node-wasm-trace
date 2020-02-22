@@ -14,6 +14,7 @@
   "dependencies": {
     "@wasmer/wasi": "^0.7.1",
     "@wasmer/wasm-transformer": "^0.7.1",
-    "binaryen": "^90.0.0"
+    "binaryen": "^90.0.0",
+    "yargs": "^15.1.0"
   }
 }

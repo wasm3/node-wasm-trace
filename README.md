@@ -18,10 +18,10 @@ It's recommended to use the most recent version of Node.js.
 npm i -g https://github.com/wasm3/wasm-trace.git
 ```
 
-### Usage examples
+### Example
 
 ```sh
-$ wasm-trace ./test/hello.wasm
+$ wasm-trace -ELM ./test/hello.wasm
 [tracer] Instrumenting...
 [tracer] Running...
 Hello WebAssembly!
@@ -43,19 +43,31 @@ get i32: 36 0 16
 ...
 ```
 
-You can also pass arguments to WASI apps:
-```sh
-$ wasm-trace qjs.wasm fib.js 10
-...
-$ wasm-trace wasm3.wasm ./test/hello.wasm
-...
+### Usage
+
+```Log
+wasm-trace.js [options] <file> [args..]
+
+Options:
+  --execution, -E  Instrument execution  [boolean]
+  --locals, -L     Instrument locals  [boolean]
+  --memory, -M     Instrument memory  [boolean]
+  --output, -o     Output filename  [string] [default: "trace.log"]
+  --wasm-output    Output instrumented wasm to ...  [string]
+  --invoke, -i     Invoke a specified function  [string]
+  --version        Show version number  [boolean]
+  --help           Show help  [boolean]
+
+Examples:
+  wasm-trace.js -E ./test/hello.wasm              Instrument, run and trace WASI app
+  wasm-trace.js -ELM -i fib ./test/fib32.wasm 20  Instrument, run and trace plain wasm file
 ```
 
 ### How it works
 
 1. The input file is instrumented with `Binaryen.js`.  
    This is equivalent to running `wasm-opt` with `--log-execution`, `--instrument-memory`, `--instrument-locals` options.
-2. Saves the instrumented wasm file along with the original, adding the `.inst` extension.
+2. Saves the instrumented wasm file, if needed.
 3. Runs the instrumented file with `Wasmer.js` + injected instrumentation handlers.
 4. Writes the produced traces to `trace.log`.
 
