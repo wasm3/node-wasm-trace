@@ -1,9 +1,9 @@
 # wasm-trace
 Instruments wasm files and traces execution, using **Binaryen.js** and **Wasmer.js**
 
-- [`log-execution`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/LogExecution.cpp) logs execution at each function `entry`, `loop` header, and `return`
-- [`instrument-memory`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentMemory.cpp) intercepts all memory reads and writes
-- [`instrument-locals`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentLocals.cpp) intercepts all local reads and writes
+- [`--execution`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/LogExecution.cpp) logs execution at each function `entry`, `loop` header, and `return`
+- [`--memory`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentMemory.cpp) intercepts all memory reads and writes
+- [`--locals`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentLocals.cpp) intercepts all local reads and writes
 
 **Note:** Currently this tool requires an experimental feature of Node.js: `wasm-bigint`.  
 It can be enabled globally or when running a single command:
@@ -49,14 +49,14 @@ get i32: 36 0 16
 wasm-trace.js [options] <file> [args..]
 
 Options:
-  --execution, -E  Instrument execution  [boolean]
-  --locals, -L     Instrument locals  [boolean]
-  --memory, -M     Instrument memory  [boolean]
+  --execution, -E  Instrument execution
+  --locals, -L     Instrument locals
+  --memory, -M     Instrument memory
   --output, -o     Output filename  [string] [default: "trace.log"]
   --wasm-output    Output instrumented wasm to ...  [string]
   --invoke, -i     Invoke a specified function  [string]
-  --version        Show version number  [boolean]
-  --help           Show help  [boolean]
+  --version        Show version number
+  --help           Show help
 
 Examples:
   wasm-trace.js -E ./test/hello.wasm              Instrument, run and trace WASI app
