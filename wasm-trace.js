@@ -36,6 +36,12 @@ const argv = require("yargs")
         type: "boolean",
         describe: "Instrument memory",
       },
+      "optimize": {
+        alias: "opt",
+        type: "boolean",
+        describe: "Optimize after instrumenting",
+        default: true,
+      },
 
       // Output options
       "output": {
@@ -59,6 +65,7 @@ const argv = require("yargs")
         nargs: 1
       },
     })
+    .string('_')
     .strict()
     .version()
     .help()
@@ -170,6 +177,12 @@ async function instrument(binary, opts)
   Binaryen.setDebugInfo(true);
   let module = Binaryen.readBinary(binary);
   module.runPasses(passes);
+
+  if (opts.optimize) {
+    log("Optimizing...")
+    module.optimize();
+  }
+
   if (!module.validate()) {
     fatal(`Validation failed.`);
   }
