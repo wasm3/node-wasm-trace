@@ -65,9 +65,8 @@ Examples:
 
 ### How it works
 
-1. The input file is instrumented with `Binaryen.js`.  
-   This is equivalent to running `wasm-opt` with `--log-execution`, `--instrument-memory`, `--instrument-locals` options.
-2. Saves the instrumented wasm file, if needed.
-3. Runs the instrumented file with `Wasmer.js` + injected instrumentation handlers.
-4. Writes the produced traces to `trace.log`.
-
+1. Analyzes the input wasm file (checks for `WASI`, instrumentation, etc.)
+2. Instruments it using `Binaryen.js` (this is equivalent to running `wasm-opt`)
+3. Saves the instrumented wasm file, if needed
+4. Runs the instrumented file with `Wasmer.js` + injected instrumentation handlers
+5. Writes the produced traces to `trace.log`
