@@ -1,6 +1,6 @@
 {
   "name": "wasm-trace",
-  "version": "0.1.1",
+  "version": "0.1.5",
   "description": "Instruments wasm files and traces execution, using Binaryen.js and Wasmer.js",
   "author": "Volodymyr Shymanskyy",
   "main": "wasm-trace.js",
@@ -15,6 +15,7 @@
     "@wasmer/wasi": "^0.7.1",
     "@wasmer/wasm-transformer": "^0.7.1",
     "binaryen": "^90.0.0",
+    "chalk": "^3.0.0",
     "yargs": "^15.1.0"
   }
 }
