@@ -15,7 +15,7 @@ It's recommended to use the most recent version of Node.js.
 ### Install
 
 ```sh
-npm i -g https://github.com/wasm3/wasm-trace.git
+npm install -g wasm-trace
 ```
 
 ### Example
