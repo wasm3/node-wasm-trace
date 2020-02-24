@@ -9,9 +9,6 @@
  * - Instrument
  *   - Calls to imported functions
  *   - Arguments and return values
- * - Post-process
- *   - Collapse chain of loops (display count)
- *   - Collapse empty function {} to a single line
  */
 
 const fs = require("fs");
@@ -107,7 +104,7 @@ function readLines(input) {
   const output = new stream.PassThrough({ objectMode: true });
   const rl = readline.createInterface({ input });
   rl.on("line", line => {
-    output.write(line);
+    output.push(line);
   });
   rl.on("close", () => {
     output.push(null);
@@ -363,6 +360,15 @@ async function post_process(binary, csv, opts)
   }
 
   const trace = fs.createWriteStream(opts.output);
+  const reader = readLines(csv);
+
+  function parseLine(line) {
+    const elements = line.split(";").map((s) => s.trim());
+    return {
+      cmd: elements[0],
+      args: elements.slice(1).map((s) => parseFloat(s)),
+    }
+  }
 
   const ctx = {
     exec_depth: 0,
@@ -403,15 +409,48 @@ async function post_process(binary, csv, opts)
     },
 
     "enter": function (id, func) {
-      trace.write(indent(id)+`enter ${getFunctionName(func)} {\n`);
-      ctx.exec_depth+=1;
+
+      // Lookahead (check if func is empty)
+      let next, funcIsEmpty = false;
+      if (next = reader.read()) {
+        const l = parseLine(next);
+        if (l.cmd == "exit" && l.args[1] == func) {
+          funcIsEmpty = true;
+        } else {
+          reader.unshift(next);
+        }
+      }
+
+      if (funcIsEmpty) {
+        trace.write(indent(id)+`enter ${getFunctionName(func)} {}\n`);
+      } else {
+        trace.write(indent(id)+`enter ${getFunctionName(func)} {\n`);
+        ctx.exec_depth+=1;
+      }
     },
     "exit": function (id, func) {
       ctx.exec_depth-=1;
       trace.write(indent(id)+`}\n`);
     },
     "loop": function (id) {
-      trace.write(indent(id)+`loop\n`);
+
+      // Lookahead (check if this is a loop sequence)
+      let next, loopCount = 1;
+      while (next = reader.read()) {
+        const l = parseLine(next);
+        if (l.cmd == "loop" && l.args[0] == id) {
+          loopCount++;
+        } else {
+          reader.unshift(next);
+          break;
+        }
+      }
+
+      if (loopCount == 1) {
+        trace.write(indent(id)+`loop\n`);
+      } else {
+        trace.write(indent(id)+`loop [${loopCount} times]\n`);
+      }
     },
 
     "load ptr": function (id, align, offset, address) {
@@ -442,12 +481,10 @@ async function post_process(binary, csv, opts)
     ...traceLocal("set f64"),
   };
 
-  for await (const line of readLines(csv)) {
-    let elements = line.split(";").map((s) => s.trim());
-    const cmd = elements[0];
-    const args = elements.slice(1).map((s) => parseFloat(s));
+  for await (const line of reader) {
+    const l = parseLine(line);
 
-    lookup[cmd](...args);
+    lookup[l.cmd](...l.args);
   }
 }
 
