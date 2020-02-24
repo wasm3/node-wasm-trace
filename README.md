@@ -49,24 +49,30 @@ get i32: 36 0 16
 wasm-trace.js [options] <file> [args..]
 
 Options:
-  --execution, -E  Instrument execution
-  --locals, -L     Instrument locals
-  --memory, -M     Instrument memory
-  --output, -o     Output filename  [string] [default: "trace.log"]
-  --wasm-output    Output instrumented wasm to ...  [string]
-  --invoke, -i     Invoke a specified function  [string]
-  --version        Show version number
-  --help           Show help
+  --execution, -E    Instrument execution
+  --locals, -L       Instrument locals
+  --memory, -M       Instrument memory
+  --optimize, --opt  Optimize after instrumenting  [boolean] [default: true]
+  --output, -o       Output filename  [string] [default: "trace.log"]
+  --save-wasm        Save instrumented wasm to ...  [string]
+  --save-raw         Save raw log file to ...  [string]
+  --process          Process raw log file  [string]
+  --invoke, -i       Invoke a specified function  [string]
+  --version          Show version number
+  --help             Show help
 
 Examples:
-  wasm-trace.js -E ./test/hello.wasm              Instrument, run and trace WASI app
-  wasm-trace.js -ELM -i fib ./test/fib32.wasm 20  Instrument, run and trace plain wasm file
+  wasm-trace.js -E ./test/hello.wasm                         Instrument, run and trace WASI app
+  wasm-trace.js -ELM --invoke=fib ./test/fib32.wasm 20       Instrument, run and trace plain wasm file
+  wasm-trace.js ./instrumented.wasm                          Run pre-instrumented wasm file
+  wasm-trace.js --process=trace.raw.log ./instrumented.wasm  Just process an existing raw trace file
 ```
 
 ### How it works
 
 1. Analyzes the input wasm file (checks for `WASI`, instrumentation, etc.)
-2. Instruments it using `Binaryen.js` (this is equivalent to running `wasm-opt`)
+2. Instruments it using `Binaryen.js`
 3. Saves the instrumented wasm file, if needed
-4. Runs the instrumented file with `Wasmer.js` + injected instrumentation handlers
-5. Writes the produced traces to `trace.log`
+4. Runs the instrumented file with injected instrumentation handlers
+5. Writes raw trace file
+6. Post-processes the raw trace file and produces a structured log file
