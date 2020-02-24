@@ -1,6 +1,6 @@
 {
   "name": "wasm-trace",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Instruments wasm files and traces execution, using Binaryen.js and Wasmer.js",
   "author": "Volodymyr Shymanskyy",
   "main": "wasm-trace.js",

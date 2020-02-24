@@ -6,7 +6,6 @@
  * Author: Volodymyr Shymanskyy
  *
  * TODO:
- * - Switch RAW format to CSV
  * - Instrument
  *   - Calls to imported functions
  *   - Arguments and return values
@@ -25,6 +24,8 @@ const Wasi = require("@wasmer/wasi");
 const Node = require("@wasmer/wasi/lib/bindings/node");
 const Binaryen = require("binaryen");
 
+const csvTraceFn = ".wasm-trace.csv";
+
 /*
  * Arguments
  */
@@ -33,8 +34,8 @@ const argv = require("yargs")
     .usage("$0 [options] <file> [args..]")
     .example('$0 -E ./test/hello.wasm',                         'Instrument, run and trace WASI app')
     .example('$0 -ELM --invoke=fib ./test/fib32.wasm 20',       'Instrument, run and trace plain wasm file')
-    .example('$0 ./instrumented.wasm',                          'Run pre-instrumented wasm file')
-    .example('$0 --process=trace.raw.log ./instrumented.wasm',  'Just process an existing raw trace file')
+    .example('$0 ./test/hello.instrumented.wasm',               'Run pre-instrumented wasm file')
+    .example('$0 --process=trace.csv ./instrumented.wasm',      'Just process an existing CSV trace file')
     .option({
       // Instrumentation options
       "execution": {
@@ -72,16 +73,16 @@ const argv = require("yargs")
         describe: "Save instrumented wasm to ...",
         nargs: 1
       },
-      "save-raw": {
+      "save-csv": {
         type: "string",
-        describe: "Save raw log file to ...",
+        describe: "Save CSV log file to ...",
         nargs: 1
       },
 
       // Other options
       "process": {
         type: "string",
-        describe: "Process raw log file",
+        describe: "Process CSV log file",
         nargs: 1
       },
       "invoke": {
@@ -134,17 +135,21 @@ function log(msg) {
 (async () => {
   const inputFile = argv._[0]
 
+  if (!inputFile) {
+    fatal(`Please specify input file. See ${chalk.white.bold('--help')} for details.`);
+  }
+
   let binary;
   try {
     binary = fs.readFileSync(inputFile);
   } catch (e) {
-    fatal(`File ${inputFile} not found`);
+    fatal(`File ${chalk.white.bold(inputFile)} not found`);
   }
 
   // If just post-processing is needed
   if (argv.process) {
-    const raw = fs.createReadStream(argv.process);
-    await post_process(binary, raw, argv);
+    const csv = fs.createReadStream(argv.process);
+    await post_process(binary, csv, argv);
     return;
   }
 
@@ -163,16 +168,19 @@ function log(msg) {
   binary = await WasmTransformer.lowerI64Imports(binary);
   */
 
-  await execute(binary, argv)
+  const csv_output = fs.createWriteStream(csvTraceFn);
+  await execute(binary, csv_output, argv)
+  csv_output.end();
 
-  const raw = fs.createReadStream(".wasm-trace.raw");
-  await post_process(binary, raw, argv);
+  const csv_input = fs.createReadStream(csvTraceFn);
+  await post_process(binary, csv_input, argv);
+  csv_input.destroy();
 
   // Cleanup
-  if (argv.saveRaw) {
-    fs.renameSync(".wasm-trace.raw", argv.saveRaw)
+  if (argv.saveCsv) {
+    fs.renameSync(csvTraceFn, argv.saveCsv)
   } else {
-    fs.unlinkSync(".wasm-trace.raw")
+    fs.unlinkSync(csvTraceFn)
   }
 })();
 
@@ -271,66 +279,44 @@ async function instrument(binary, opts)
   return result;
 }
 
-async function execute(binary, opts)
+async function execute(binary, trace, opts)
 {
-  const trace = fs.createWriteStream(".wasm-trace.raw");
-
-  function traceMemory(name) {
-    return (id, val) => {
-      trace.write(`${name}: ${id} ${val}\n`);
-      return val;
-    }
+  const traceGeneric = (name) => function() {
+    trace.write(name + ';' + Array.from(arguments).join(';') + '\n');
   }
 
-  function traceLocal(name) {
-    return (id, local, val) => {
-      trace.write(`${name}: ${id} ${local} ${val}\n`);
-      return val;
-    }
+  const traceRetLast = (name) => function() {
+    trace.write(name + ';' + Array.from(arguments).join(';') + '\n');
+    return arguments[arguments.length-1];
   }
 
   let imports = {
     env: {
-      log_execution: function (id) {
-        trace.write(`exec: ${id}\n`);
-      },
+      log_execution:  traceGeneric("exec"),
 
-      log_exec_enter: function (id, func) {
-        trace.write(`enter: ${id} ${func}\n`);
-      },
-      log_exec_exit: function (id, func) {
-        trace.write(`exit: ${id} ${func}\n`);
-      },
-      log_exec_loop: function (id) {
-        trace.write(`loop: ${id}\n`);
-      },
+      log_exec_enter: traceGeneric("enter"),
+      log_exec_exit:  traceGeneric("exit"),
+      log_exec_loop:  traceGeneric("loop"),
 
-      load_ptr: function (id, align, offset, address) {
-        trace.write(`load ptr: ${id} ${align} ${offset} ${address}\n`);
-        return address;
-      },
-      store_ptr: function (id, align, offset, address) {
-        trace.write(`store ptr: ${id} ${align} ${offset} ${address}\n`);
-        return address;
-      },
+           load_ptr:  traceRetLast( "load ptr"),
+          store_ptr:  traceRetLast("store ptr"),
+       load_val_i32:  traceRetLast( "load i32"),
+      store_val_i32:  traceRetLast("store i32"),
+       load_val_i64:  traceRetLast( "load i64"),
+      store_val_i64:  traceRetLast("store i64"),
+       load_val_f32:  traceRetLast( "load f32"),
+      store_val_f32:  traceRetLast("store f32"),
+       load_val_f64:  traceRetLast( "load f64"),
+      store_val_f64:  traceRetLast("store f64"),
 
-       load_val_i32: traceMemory( "load i32"),
-      store_val_i32: traceMemory("store i32"),
-       load_val_i64: traceMemory( "load i64"),
-      store_val_i64: traceMemory("store i64"),
-       load_val_f32: traceMemory( "load f32"),
-      store_val_f32: traceMemory("store f32"),
-       load_val_f64: traceMemory( "load f64"),
-      store_val_f64: traceMemory("store f64"),
-
-      get_i32: traceLocal("get i32"),
-      set_i32: traceLocal("set i32"),
-      get_i64: traceLocal("get i64"),
-      set_i64: traceLocal("set i64"),
-      get_f32: traceLocal("get f32"),
-      set_f32: traceLocal("set f32"),
-      get_f64: traceLocal("get f64"),
-      set_f64: traceLocal("set f64"),
+      get_i32:        traceRetLast("get i32"),
+      set_i32:        traceRetLast("set i32"),
+      get_i64:        traceRetLast("get i64"),
+      set_i64:        traceRetLast("set i64"),
+      get_f32:        traceRetLast("get f32"),
+      set_f32:        traceRetLast("set f32"),
+      get_f64:        traceRetLast("get f64"),
+      set_f64:        traceRetLast("set f64"),
     }
   }
 
@@ -364,18 +350,16 @@ async function execute(binary, opts)
   } else {
     fatal("Cannot execute: entry function not specified")
   }
-
-  trace.end();
 }
 
-async function post_process(binary, raw, opts)
+async function post_process(binary, csv, opts)
 {
   log(`Processing...`)
 
   const wasmInfo = await analyze_wasm(binary);
 
   if (!wasmInfo.isInstrumented) {
-    fatal("Processing raw trace file requires input of corresponding pre-instrumented wasm file")
+    fatal("Processing CSV trace file requires input of corresponding pre-instrumented wasm file")
   }
 
   const trace = fs.createWriteStream(opts.output);
@@ -458,10 +442,10 @@ async function post_process(binary, raw, opts)
     ...traceLocal("set f64"),
   };
 
-  for await (const line of readLines(raw)) {
-    let elements = line.split(":").map((s) => s.trim());
+  for await (const line of readLines(csv)) {
+    let elements = line.split(";").map((s) => s.trim());
     const cmd = elements[0];
-    const args = elements[1].split(" ").map((s) => parseInt(s, 10));
+    const args = elements.slice(1).map((s) => parseFloat(s));
 
     lookup[cmd](...args);
   }
