@@ -38,31 +38,6 @@ The trace can be found in `trace.log`:
        |     |         ...
 ```
 
-### Usage
-
-```log
-wasm-trace.js [options] <file> [args..]
-
-Options:
-  --execution, -E    Instrument execution  [boolean]
-  --locals, -L       Instrument locals  [boolean]
-  --memory, -M       Instrument memory  [boolean]
-  --optimize, --opt  Optimize (use --no-opt to disable)  [boolean] [default: true]
-  --output, -o       Output filename  [string] [default: "trace.log"]
-  --save-wasm        Save instrumented wasm to ...  [string]
-  --save-csv         Save CSV log file to ...  [string]
-  --process          Process CSV log file  [string]
-  --invoke, -i       Invoke a specified function  [string]
-  --version          Show version number  [boolean]
-  --help             Show help  [boolean]
-
-Examples:
-  wasm-trace.js -E ./test/hello.wasm                     Instrument, run and trace WASI app
-  wasm-trace.js -ELM --invoke=fib ./test/fib32.wasm 20   Instrument, run and trace plain wasm file
-  wasm-trace.js ./test/hello.instrumented.wasm           Run pre-instrumented wasm file
-  wasm-trace.js --process=trace.csv ./instrumented.wasm  Just process an existing CSV trace file
-```
-
 ### How it works
 
 1. Analyzes the input wasm file (checks for `WASI`, instrumentation, etc.)
@@ -88,3 +63,29 @@ It can be enabled globally or when running a single command:
 node --experimental-wasm-bigint {command}
 ```
 It's recommended to use the most recent version of Node.js.
+
+
+### Usage
+
+```log
+wasm-trace.js [options] <file> [args..]
+
+Options:
+  --execution, -E    Instrument execution  [boolean]
+  --locals, -L       Instrument locals  [boolean]
+  --memory, -M       Instrument memory  [boolean]
+  --optimize, --opt  Optimize (use --no-opt to disable)  [boolean] [default: true]
+  --output, -o       Output filename  [string] [default: "trace.log"]
+  --save-wasm        Save instrumented wasm to ...  [string]
+  --save-csv         Save CSV log file to ...  [string]
+  --process          Process CSV log file  [string]
+  --invoke, -i       Invoke a specified function  [string]
+  --version          Show version number  [boolean]
+  --help             Show help  [boolean]
+
+Examples:
+  wasm-trace.js -E ./test/hello.wasm                     Instrument, run and trace WASI app
+  wasm-trace.js -ELM --invoke=fib ./test/fib32.wasm 20   Instrument, run and trace plain wasm file
+  wasm-trace.js ./test/hello.instrumented.wasm           Run pre-instrumented wasm file
+  wasm-trace.js --process=trace.csv ./instrumented.wasm  Just process an existing CSV trace file
+```
