@@ -71,7 +71,7 @@ Examples:
 4. Writes CSV trace file
 5. Post-processes the CSV trace file and produces a structured log file
 
-`Instrumentation`, `execution` and `post-processing` stages are completely decoupled.  
+**`Instrumentation`, `execution` and `post-processing` stages are completely decoupled.**  
 For example the following scenario is supported:
 - Instrument `.wasm` file: `wasm-trace -ELM --save-wasm=./intrumented.wasm ./test/hello.wasm`
 - Run in any wasm engine that can produce the `trace.csv` file
