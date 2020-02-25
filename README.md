@@ -1,7 +1,7 @@
 # wasm-trace
 Instruments wasm files and traces execution, using **Binaryen.js** and **Wasmer.js**
 
-Areas of application:
+### Areas of application
 - Wasm/WASI debugging
 - Wasm engine and runtime debugging
 - Quality assurance and maintenance
@@ -47,11 +47,11 @@ Options:
   --execution, -E    Instrument execution  [boolean]
   --locals, -L       Instrument locals  [boolean]
   --memory, -M       Instrument memory  [boolean]
-  --optimize, --opt  Optimize after instrumenting  [boolean] [default: true]
+  --optimize, --opt  Optimize (use --no-opt to disable)  [boolean] [default: true]
   --output, -o       Output filename  [string] [default: "trace.log"]
   --save-wasm        Save instrumented wasm to ...  [string]
-  --save-csv         Save csv log file to ...  [string]
-  --process          Process csv log file  [string]
+  --save-csv         Save CSV log file to ...  [string]
+  --process          Process CSV log file  [string]
   --invoke, -i       Invoke a specified function  [string]
   --version          Show version number  [boolean]
   --help             Show help  [boolean]
@@ -59,21 +59,22 @@ Options:
 Examples:
   wasm-trace.js -E ./test/hello.wasm                     Instrument, run and trace WASI app
   wasm-trace.js -ELM --invoke=fib ./test/fib32.wasm 20   Instrument, run and trace plain wasm file
-  wasm-trace.js ./instrumented.wasm                      Run pre-instrumented wasm file
+  wasm-trace.js ./test/hello.instrumented.wasm           Run pre-instrumented wasm file
   wasm-trace.js --process=trace.csv ./instrumented.wasm  Just process an existing CSV trace file
 ```
 
 ### Notes
+
+Instrumentation, execution and post-processing stages are completely decoupled.  
+For example the following scenario is supported:
+- Instrument `.wasm` file: `wasm-trace -ELM --save-wasm=./intrumented.wasm ./test/hello.wasm`
+- Run in any wasm engine (that can produce the `trace.csv` file)
+- Analyze/post-process: `wasm-trace --process=trace.csv ./instrumented.wasm`
+
+Following **Binaryen** passes are supported:
 - [`--execution`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/LogExecution.cpp) logs execution at each function `entry`, `loop` header, and `return`
 - [`--memory`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentMemory.cpp) intercepts all memory reads and writes
 - [`--locals`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentLocals.cpp) intercepts all local reads and writes
-
-**Note:** Currently this tool requires an experimental feature of Node.js: `wasm-bigint`.
-It can be enabled globally or when running a single command:
-```sh
-node --experimental-wasm-bigint {command}
-```
-It's recommended to use the most recent version of Node.js.
 
 ### How it works
 
@@ -83,3 +84,11 @@ It's recommended to use the most recent version of Node.js.
 4. Runs the instrumented file with injected instrumentation handlers
 5. Writes CSV trace file
 6. Post-processes the CSV trace file and produces a structured log file
+
+
+**Note:** Currently this tool requires an experimental feature of Node.js: `wasm-bigint`.
+It can be enabled globally or when running a single command:
+```sh
+node --experimental-wasm-bigint {command}
+```
+It's recommended to use the most recent version of Node.js.
