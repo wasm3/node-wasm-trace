@@ -6,9 +6,10 @@
  * Author: Volodymyr Shymanskyy
  *
  * TODO:
- * - Instrument
- *   - Calls to imported functions
- *   - Arguments and return values
+ * - Fix bigint parsing and formatting
+ * - Trace calls to imported functions
+ * - Trace and return values
+ * - Trace memory.grow
  */
 
 const fs = require("fs");
@@ -53,7 +54,7 @@ const argv = require("yargs")
       "optimize": {
         alias: "opt",
         type: "boolean",
-        describe: "Optimize after instrumenting",
+        describe: "Optimize (use --no-opt to disable)",
         default: true,
       },
 
@@ -365,8 +366,9 @@ async function post_process(binary, csv, opts)
   function parseLine(line) {
     const elements = line.split(";").map((s) => s.trim());
     return {
-      cmd: elements[0],
-      args: elements.slice(1).map((s) => parseFloat(s)),
+      cmd:  elements[0],
+      id:   parseInt(elements[1], 10),
+      args: elements.slice(2).map((s) => parseFloat(s)),
     }
   }
 
@@ -375,8 +377,11 @@ async function post_process(binary, csv, opts)
     mem: {}
   }
 
-  function indent(id) {
-    return id.toString().padStart(6) + ' | ' + '  '.repeat(Math.max(0, ctx.exec_depth));
+  function traceWrite({id, type, body, comment}) {
+    type = type || "";
+    let prefix = id.toString().padStart(6) + ' | ' + type.padEnd(3) + ' | ' + '  '.repeat(Math.max(0, ctx.exec_depth));
+
+    trace.write(prefix + body + '\n')
   }
 
   function getFunctionName(i) {
@@ -387,25 +392,22 @@ async function post_process(binary, csv, opts)
     }
   }
 
-  const traceMemory = (name) => ({
-    [name]: (id, val) => {
-      assert(ctx.mem[id]);
-      trace.write(indent(id)+`${name}: ${ctx.mem[id].address}+${ctx.mem[id].offset} ${val}\n`);
-      ctx.mem[id] = undefined;
-      return val;
-    }
-  });
+  const traceMemory = (name, type) => function (id, val) {
+    assert(ctx.mem[id]);
+    const args = ctx.mem[id];
+    traceWrite({id, type, body: `${name.padEnd(6)} ${args.address}+${args.offset} ${val}`});
+    ctx.mem[id] = undefined;
+    return val;
+  };
 
-  const traceLocal = (name) => ({
-    [name]: (id, local, val) => {
-      trace.write(indent(id)+`${name}: ${local} ${val}\n`);
-      return val;
-    }
-  });
+  const traceLocal = (name, type) => function (id, local, val) {
+    traceWrite({id, type, body: `${name.padEnd(6)} ${local} ${val}`});
+    return val;
+  };
 
   const lookup = {
     "exec": function (id) {
-      trace.write(indent(id)+`exec\n`);
+      traceWrite({id, body: "exec"});
     },
 
     "enter": function (id, func) {
@@ -414,23 +416,25 @@ async function post_process(binary, csv, opts)
       let next, funcIsEmpty = false;
       if (next = reader.read()) {
         const l = parseLine(next);
-        if (l.cmd == "exit" && l.args[1] == func) {
+        if (l.cmd == "exit" && l.args[0] == func) {
           funcIsEmpty = true;
         } else {
           reader.unshift(next);
         }
       }
 
+      const fname = getFunctionName(func)
+
       if (funcIsEmpty) {
-        trace.write(indent(id)+`enter ${getFunctionName(func)} {}\n`);
+        traceWrite({id, body: `enter ${fname} {}`});
       } else {
-        trace.write(indent(id)+`enter ${getFunctionName(func)} {\n`);
+        traceWrite({id, body: `enter ${fname} {`});
         ctx.exec_depth+=1;
       }
     },
     "exit": function (id, func) {
       ctx.exec_depth-=1;
-      trace.write(indent(id)+`}\n`);
+      traceWrite({id, body: "}"});
     },
     "loop": function (id) {
 
@@ -438,7 +442,7 @@ async function post_process(binary, csv, opts)
       let next, loopCount = 1;
       while (next = reader.read()) {
         const l = parseLine(next);
-        if (l.cmd == "loop" && l.args[0] == id) {
+        if (l.cmd == "loop" && l.id == id) {
           loopCount++;
         } else {
           reader.unshift(next);
@@ -447,9 +451,9 @@ async function post_process(binary, csv, opts)
       }
 
       if (loopCount == 1) {
-        trace.write(indent(id)+`loop\n`);
+        traceWrite({id, body: `loop`});
       } else {
-        trace.write(indent(id)+`loop [${loopCount} times]\n`);
+        traceWrite({id, body: `loop [${loopCount} times]`});
       }
     },
 
@@ -462,29 +466,36 @@ async function post_process(binary, csv, opts)
       ctx.mem[id] = { align, offset, address }
     },
 
-    ...traceMemory( "load i32"),
-    ...traceMemory("store i32"),
-    ...traceMemory( "load i64"),
-    ...traceMemory("store i64"),
-    ...traceMemory( "load f32"),
-    ...traceMemory("store f32"),
-    ...traceMemory( "load f64"),
-    ...traceMemory("store f64"),
+     "load i32": traceMemory("load" , "i32"),
+    "store i32": traceMemory("store", "i32"),
+     "load i64": traceMemory("load" , "i64"),
+    "store i64": traceMemory("store", "i64"),
+     "load f32": traceMemory("load" , "f32"),
+    "store f32": traceMemory("store", "f32"),
+     "load f64": traceMemory("load" , "f64"),
+    "store f64": traceMemory("store", "f64"),
 
-    ...traceLocal("get i32"),
-    ...traceLocal("set i32"),
-    ...traceLocal("get i64"),
-    ...traceLocal("set i64"),
-    ...traceLocal("get f32"),
-    ...traceLocal("set f32"),
-    ...traceLocal("get f64"),
-    ...traceLocal("set f64"),
+    "get i32":   traceLocal("get", "i32"),
+    "set i32":   traceLocal("set", "i32"),
+    "get i64":   traceLocal("get", "i64"),
+    "set i64":   traceLocal("set", "i64"),
+    "get f32":   traceLocal("get", "f32"),
+    "set f32":   traceLocal("set", "f32"),
+    "get f64":   traceLocal("get", "f64"),
+    "set f64":   traceLocal("set", "f64"),
   };
 
   for await (const line of reader) {
     const l = parseLine(line);
 
-    lookup[l.cmd](...l.args);
+    if (lookup[l.cmd]) {
+      lookup[l.cmd](l.id, ...l.args);
+    } else {
+      traceWrite({
+        id:   l.id,
+        body: `${l.cmd.padEnd(6)} ${l.args.join(' ')}`,
+      });
+    }
   }
 }
 

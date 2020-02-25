@@ -1,16 +1,12 @@
 # wasm-trace
 Instruments wasm files and traces execution, using **Binaryen.js** and **Wasmer.js**
 
-- [`--execution`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/LogExecution.cpp) logs execution at each function `entry`, `loop` header, and `return`
-- [`--memory`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentMemory.cpp) intercepts all memory reads and writes
-- [`--locals`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentLocals.cpp) intercepts all local reads and writes
-
-**Note:** Currently this tool requires an experimental feature of Node.js: `wasm-bigint`.  
-It can be enabled globally or when running a single command:
-```sh
-node --experimental-wasm-bigint {command}
-```
-It's recommended to use the most recent version of Node.js.
+Areas of application:
+- Wasm/WASI debugging
+- Wasm engine and runtime debugging
+- Quality assurance and maintenance
+- Security research
+- Reverse engineering
 
 ### Install
 
@@ -22,29 +18,24 @@ npm install -g wasm-trace
 
 ```sh
 $ wasm-trace -ELM ./test/hello.wasm
-[tracer] Instrumenting...
-[tracer] Running...
+[tracer] Instrumenting and optimizing...
+[tracer] Running WASI...
 Hello WebAssembly!
+[tracer] Processing...
 ```
 The trace can be found in `trace.log`:
 ```log
-     2 | enter _start {
-     0 |   set i32: 0 68256
-    41 |   enter __wasilibc_init_preopen {
-     4 |     enter malloc {
-    32 |       get i32: 0 16
-    21 |       enter dlmalloc {
-    33 |         set i32: 1 68240
-    34 |         get i32: 0 16
-     5 |         load i32: 0+1056 0
-    35 |         set i32: 2 0
-    36 |         get i32: 0 16
-    37 |         get i32: 0 16
-    38 |         set i32: 3 32
-    39 |         set i32: 4 4
-    40 |         set i32: 0 0
-    65 |         get i32: 3 32
-   ... |         ...
+     2 |     | enter _start {
+     0 | i32 |   set    0 70784
+    43 |     |   enter __wasilibc_init_preopen {
+     6 |     |     enter malloc {
+    38 | i32 |       get    0 16
+    23 |     |       enter dlmalloc {
+    39 | i32 |         set    1 70768
+    40 | i32 |         get    0 16
+     8 | i32 |         load   0+3424 0
+    41 | i32 |         set    2 0
+       |     |         ...
 ```
 
 ### Usage
@@ -71,6 +62,18 @@ Examples:
   wasm-trace.js ./instrumented.wasm                      Run pre-instrumented wasm file
   wasm-trace.js --process=trace.csv ./instrumented.wasm  Just process an existing CSV trace file
 ```
+
+### Notes
+- [`--execution`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/LogExecution.cpp) logs execution at each function `entry`, `loop` header, and `return`
+- [`--memory`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentMemory.cpp) intercepts all memory reads and writes
+- [`--locals`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentLocals.cpp) intercepts all local reads and writes
+
+**Note:** Currently this tool requires an experimental feature of Node.js: `wasm-bigint`.
+It can be enabled globally or when running a single command:
+```sh
+node --experimental-wasm-bigint {command}
+```
+It's recommended to use the most recent version of Node.js.
 
 ### How it works
 
