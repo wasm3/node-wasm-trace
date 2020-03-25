@@ -395,7 +395,7 @@ async function post_process(binary, csv, opts)
   const traceMemory = (name, type) => function (id, val) {
     assert(ctx.mem[id]);
     const args = ctx.mem[id];
-    traceWrite({id, type, body: `${name.padEnd(6)} ${args.address}+${args.offset} ${val}`});
+    traceWrite({id, type, body: `${name.padEnd(6)} ${args.address}+${args.offset} ${args.bytes} ${val}`});
     ctx.mem[id] = undefined;
     return val;
   };
@@ -457,13 +457,13 @@ async function post_process(binary, csv, opts)
       }
     },
 
-    "load ptr": function (id, align, offset, address) {
+    "load ptr": function (id, bytes, offset, address) {
       assert.equal(ctx.mem[id], undefined)
-      ctx.mem[id] = { align, offset, address }
+      ctx.mem[id] = { bytes, offset, address }
     },
-    "store ptr": function (id, align, offset, address) {
+    "store ptr": function (id, bytes, offset, address) {
       assert.equal(ctx.mem[id], undefined)
-      ctx.mem[id] = { align, offset, address }
+      ctx.mem[id] = { bytes, offset, address }
     },
 
      "load i32": traceMemory("load" , "i32"),
