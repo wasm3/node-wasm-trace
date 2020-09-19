@@ -17,12 +17,11 @@ const chalk = require("chalk");
 const assert = require('assert').strict;
 const readline = require('readline');
 const stream = require('stream');
+const tmp = require('tmp');
 
 const Wasi = require("@wasmer/wasi");
 const Node = require("@wasmer/wasi/lib/bindings/node");
 const Binaryen = require("binaryen");
-
-const csvTraceFn = ".wasm-trace.csv";
 
 /*
  * Arguments
@@ -166,6 +165,7 @@ function log(msg) {
   binary = await WasmTransformer.lowerI64Imports(binary);
   */
 
+  const csvTraceFn = tmp.tmpNameSync({prefix: '.wasm-trace', postfix: '.csv', tmpdir: './'});
   const csv_output = fs.createWriteStream(csvTraceFn);
   await execute(binary, csv_output, argv)
   csv_output.end();

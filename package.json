@@ -16,6 +16,7 @@
     "@wasmer/wasm-transformer": "^0.7.1",
     "binaryen": "^90.0.0",
     "chalk": "^3.0.0",
+    "tmp": "^0.2.1",
     "yargs": "^15.1.0"
   }
 }
