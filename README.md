@@ -54,7 +54,7 @@ Following **Binaryen** instrumentation passes are supported:
 **`Instrumentation`, `execution` and `post-processing` stages are completely decoupled.**  
 You can run each step separately:
 
-1. Add instrumentation to a **wasm** binary file
+1. Add instrumentation to a **wasm** binary file.  
 ```sh
 node ./wasm-trace.js -ELM --save-wasm=./instrumented.wasm ./test/hello.wasm
 ```
@@ -63,7 +63,7 @@ Or using **Binaryen** directly:
 wasm-opt --log-execution --instrument-memory --instrument-locals ./test/hello.wasm -o ./instrumented.wasm
 ```
 
-2. Run instrumented wasm file
+2. Run instrumented wasm file.  
 Wasm engine needs to support producing the `trace.csv` file.
 For **Node.js**, this step currently requires enabling `bigint` and `wasi` features:
 ```sh
@@ -74,7 +74,7 @@ Or using **Wasm3**:
 wasm3 ./instrumented.wasm    # The trace will be written to wasm3_trace.csv
 ```
 
-3. Analyze/post-process the CSV trace file
+3. Analyze/post-process the CSV trace file.  
 ```sh
 node ./wasm-trace.js --process=trace.csv ./instrumented.wasm
 ```
