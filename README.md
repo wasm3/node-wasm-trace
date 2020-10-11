@@ -1,5 +1,5 @@
 # wasm-trace
-Instruments wasm files and traces execution, using **Binaryen.js** and **Wasmer.js**
+Instruments wasm files using **Binaryen.js**, runs them and traces execution
 
 ### Areas of application
 - Wasm/WASI debugging
@@ -46,24 +46,40 @@ The trace can be found in `trace.log`:
 4. Writes CSV trace file
 5. Post-processes the CSV trace file and produces a structured log file
 
-**`Instrumentation`, `execution` and `post-processing` stages are completely decoupled.**  
-For example the following scenario is supported:
-- Instrument `.wasm` file: `wasm-trace -ELM --save-wasm=./intrumented.wasm ./test/hello.wasm`
-- Run in any wasm engine that can produce the `trace.csv` file
-- Analyze/post-process: `wasm-trace --process=trace.csv ./instrumented.wasm`
-
-Following **Binaryen** passes are supported:
+Following **Binaryen** instrumentation passes are supported:
 - [`--execution`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/LogExecution.cpp) logs execution at each function `entry`, `loop` header, and `return`
 - [`--memory`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentMemory.cpp) intercepts all memory reads and writes
 - [`--locals`](https://github.com/WebAssembly/binaryen/blob/master/src/passes/InstrumentLocals.cpp) intercepts all local reads and writes
 
-**Note:** Currently this tool requires an experimental feature of Node.js: `wasm-bigint`.
-It can be enabled globally or when running a single command:
-```sh
-node --experimental-wasm-bigint {command}
-```
-It's recommended to use the most recent version of Node.js.
+**`Instrumentation`, `execution` and `post-processing` stages are completely decoupled.**  
+You can run each step separately:
 
+1. Add instrumentation to a **wasm** binary file
+```sh
+node ./wasm-trace.js -ELM --save-wasm=./instrumented.wasm ./test/hello.wasm
+```
+Or using **Binaryen** directly:
+```sh
+wasm-opt --log-execution --instrument-memory --instrument-locals ./test/hello.wasm -o ./instrumented.wasm
+```
+
+2. Run instrumented wasm file
+Wasm engine needs to support producing the `trace.csv` file.
+For **Node.js**, this step currently requires enabling `bigint` and `wasi` features:
+```sh
+node --experimental-wasm-bigint --experimental-wasi-unstable-preview1 ./wasm-trace.js --save-csv=trace.csv ./instrumented.wasm
+```
+Or using **Wasm3**:
+```sh
+wasm3 ./instrumented.wasm    # The trace will be written to wasm3_trace.csv
+```
+
+3. Analyze/post-process the CSV trace file
+```sh
+node ./wasm-trace.js --process=trace.csv ./instrumented.wasm
+```
+
+It's recommended to use the most recent version of Node.js.
 
 ### Usage
 
@@ -89,3 +105,4 @@ Examples:
   wasm-trace.js ./test/hello.instrumented.wasm           Run pre-instrumented wasm file
   wasm-trace.js --process=trace.csv ./instrumented.wasm  Just process an existing CSV trace file
 ```
+

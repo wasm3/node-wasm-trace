@@ -1,4 +1,4 @@
-#!node --experimental-wasm-bigint
+#!/usr/bin/env -S node --experimental-wasm-bigint --experimental-wasi-unstable-preview1
 
 "use strict";
 
@@ -8,7 +8,7 @@
  * TODO:
  * - Fix bigint parsing and formatting
  * - Trace calls to imported functions
- * - Trace and return values
+ * - Trace arguments and return values
  * - Trace memory.grow
  */
 
@@ -18,10 +18,6 @@ const assert = require('assert').strict;
 const readline = require('readline');
 const stream = require('stream');
 const tmp = require('tmp');
-
-const Wasi = require("@wasmer/wasi");
-const Node = require("@wasmer/wasi/lib/bindings/node");
-const Binaryen = require("binaryen");
 
 /*
  * Arguments
@@ -125,9 +121,9 @@ function log(msg) {
   console.error(chalk.grey('[tracer] ') + msg);
 }
 
-/*
+/*******************************************************************
  * Main
- */
+ *******************************************************************/
 
 (async () => {
   const inputFile = argv._[0]
@@ -159,12 +155,6 @@ function log(msg) {
     fs.writeFileSync(argv.saveWasm, binary);
   }
 
-  /* I64 transform is not needed (as soon as we're running with wasm-bigint support)
-  log("I64 transform...");
-  const WasmTransformer = require("@wasmer/wasm-transformer");
-  binary = await WasmTransformer.lowerI64Imports(binary);
-  */
-
   const csvTraceFn = tmp.tmpNameSync({prefix: '.wasm-trace', postfix: '.csv', tmpdir: './'});
   const csv_output = fs.createWriteStream(csvTraceFn);
   await execute(binary, csv_output, argv)
@@ -182,8 +172,16 @@ function log(msg) {
   }
 })();
 
+/*******************************************************************
+ * Analyze wasm file:
+ * - Detect existing instrumentation
+ * - Detect WASI
+ *******************************************************************/
+
 async function analyze_wasm(binary)
 {
+  const Binaryen = require("binaryen");
+
   let result = {
     isWasi: false,
     isInstrumented: false,
@@ -226,8 +224,14 @@ async function analyze_wasm(binary)
   return result;
 }
 
+/*******************************************************************
+ * Instrument wasm file using Binaryen
+ *******************************************************************/
+
 async function instrument(binary, opts)
 {
+  const Binaryen = require("binaryen");
+
   const workNeeded = (opts.locals || opts.memory || opts.execution);
   if (workNeeded && opts._wasmInfo.isInstrumented) {
     fatal(`Wasm file seems to be already instrumented => refusing to instrument`)
@@ -277,6 +281,10 @@ async function instrument(binary, opts)
   return result;
 }
 
+/*******************************************************************
+ * Execute WASM file, collect traces
+ *******************************************************************/
+
 async function execute(binary, trace, opts)
 {
   const traceGeneric = (name) => function() {
@@ -321,15 +329,20 @@ async function execute(binary, trace, opts)
   if (opts._wasmInfo.isWasi) {
     log(`Running WASI...`)
 
-    const wasi = new Wasi.WASI({
-      args:     opts._,
-      env:      {},
-      preopens: { "./": "./" },
-      bindings: Object.assign({}, Node.default, { fs }),
+    const { WASI } = require('wasi');
+    const wasi = new WASI({
+      args:       opts._,
+      env:        {},
+      preopens:   {
+        "./": "./"
+      }
     });
 
     const { instance } = await WebAssembly.instantiate(binary,
-      Object.assign({}, imports, { wasi_unstable: wasi.wasiImport })
+      Object.assign({}, imports, {
+          wasi_unstable:            wasi.wasiImport,
+          wasi_snapshot_preview1:   wasi.wasiImport
+      })
     );
 
     if (opts.invoke) {
@@ -349,6 +362,10 @@ async function execute(binary, trace, opts)
     fatal("Cannot execute: entry function not specified")
   }
 }
+
+/*******************************************************************
+ * Post-process trace file, generate convenient output
+ *******************************************************************/
 
 async function post_process(binary, csv, opts)
 {
