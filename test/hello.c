@@ -3,5 +3,7 @@
 
 int main(int argc, char **argv)
 {
-  puts("Hello WebAssembly!");
+  printf("Hello WebAssembly!\n");
+  printf("%d, %ld, %f, %lf\n", 1, 2L, 3.f, 4.);
 }
+
